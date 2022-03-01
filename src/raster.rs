@@ -21,7 +21,7 @@ impl VertexBuffer {
 			Primitive::LineStrip => rasterize_line_strips(self),
 			Primitive::LineLoop => rasterize_line_loops(self),
 			Primitive::Triangle => rasterize_triangles(self),
-			Primitive::TriangleStrip => Vec::new(),
+			Primitive::TriangleStrip => rasterize_triangle_strips(self),
 			Primitive::TriangleWire => rasterize_triangle_wires(self),
 			Primitive::TriangleWireStrip => rasterize_triangle_wire_strips(self),
 		};
@@ -102,6 +102,17 @@ fn rasterize_triangle_wire_strips(vbuf: &[Vertex]) -> Vec<Pixel> {
 fn rasterize_triangles(vbuf: &mut [Vertex]) -> Vec<Pixel> {
 	vbuf.par_chunks_exact_mut(3)
 		.map(|triplet| rasterize_triangle(triplet))
+		.collect::<Vec<Vec<Pixel>>>()
+		.concat()
+}
+
+#[inline(always)]
+fn rasterize_triangle_strips(vbuf: &mut [Vertex]) -> Vec<Pixel> {
+	let v_stripbuf = VertexTriangleStripBuffer { buf: vbuf, idx: 1 };
+
+	v_stripbuf
+		.par_bridge()
+		.map(|mut triplet| rasterize_triangle(&mut triplet))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
 }
