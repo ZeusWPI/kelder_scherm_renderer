@@ -54,24 +54,34 @@ pub enum Primitive {
 	TriangleStrip,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct Vertex {
+	pub x: isize,
+	pub y: isize,
+}
+
 #[derive(Debug, Clone)]
 pub struct VertexBuffer {
-	vertices: Vec<(usize, usize)>,
+	vertices: Vec<Vertex>,
 }
 
 // Implement Deref so you can call VertexBuffer.iter()
 impl Deref for VertexBuffer {
-	type Target = Vec<(usize, usize)>;
+	type Target = Vec<Vertex>;
 
 	fn deref(&self) -> &Self::Target { &self.vertices }
+}
+
+impl From<Vec<Vertex>> for VertexBuffer {
+	fn from(v: Vec<Vertex>) -> Self { Self { vertices: v } }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pixel {
 	/// X coordinate
-	pub x:     usize,
+	pub x:     isize,
 	/// Y coordinate
-	pub y:     usize,
+	pub y:     isize,
 	/// RGBA color
 	pub color: (u8, u8, u8, u8),
 }
@@ -98,5 +108,5 @@ impl Deref for PixelBuffer {
 }
 
 impl From<Vec<Pixel>> for PixelBuffer {
-	fn from(v: Vec<Pixel>) -> Self { PixelBuffer { pixels: v } }
+	fn from(v: Vec<Pixel>) -> Self { Self { pixels: v } }
 }
