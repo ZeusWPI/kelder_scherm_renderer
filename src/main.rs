@@ -6,12 +6,12 @@ async fn main() -> Result<(), RenderError> {
 	let cfg = Config::new(600, 800, Primitive::Triangle);
 
 	let verts = vec![
-		Vertex(250, 250),
-		Vertex(270, 250),
-		Vertex(260, 265),
-		Vertex(150, 150),
-		Vertex(170, 150),
-		Vertex(160, 165),
+		Vertex(200, 200),
+		Vertex(220, 200),
+		Vertex(210, 215),
+		Vertex(100, 100),
+		Vertex(120, 100),
+		Vertex(110, 115),
 	];
 
 	let vbuf = VertexBuffer::from(verts);

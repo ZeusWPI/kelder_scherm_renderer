@@ -69,7 +69,7 @@ fn rasterize_line_loop(vbuf: &[Vertex]) -> Vec<Pixel> {
 #[inline(always)]
 fn rasterize_triangle(vbuf: &[Vertex]) -> Vec<Pixel> {
 	vbuf.par_chunks_exact(3)
-		.map(|triplet| rasterize_line_loop(triplet))
+		.map(|triplet| bresenham_scan_triangle(triplet))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
 }
@@ -90,6 +90,14 @@ impl<'a> Iterator for VertexStripBuffer<'a> {
 			None
 		}
 	}
+}
+
+fn bresenham_scan_triangle(triplet: &[Vertex]) -> Vec<Pixel> {
+	let mut pbuf = bresenham_scan(&triplet[0..=1]);
+	pbuf.append(&mut bresenham_scan(&triplet[1..=2]));
+	pbuf.append(&mut bresenham_scan(&vec![triplet[2], triplet[0]]));
+
+	pbuf
 }
 
 fn bresenham_scan(pair: &[Vertex]) -> Vec<Pixel> {
