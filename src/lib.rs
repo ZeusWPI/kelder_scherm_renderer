@@ -42,8 +42,6 @@ pub enum Primitive {
 	/// Same as LineStrip, but connects the first and last vertex
 	/// Essentially the same as drawing a polygon
 	LineLoop,
-	/// Same as LineLoop, but fills the resulting polygon with color
-	LineLoopFilled,
 	/// Treat each separate 3-tuple of vertices as defining a triangle
 	/// eg. vertices 0, 1, and 2 are a triangle; 3, 4, and 5 are a triangle, ...
 	/// Unmatched vertices are ignored
@@ -55,10 +53,7 @@ pub enum Primitive {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Vertex {
-	pub x: isize,
-	pub y: isize,
-}
+pub struct Vertex(pub isize, pub isize);
 
 #[derive(Debug, Clone)]
 pub struct VertexBuffer {
@@ -109,4 +104,10 @@ impl Deref for PixelBuffer {
 
 impl From<Vec<Pixel>> for PixelBuffer {
 	fn from(v: Vec<Pixel>) -> Self { Self { pixels: v } }
+}
+
+impl std::fmt::Display for PixelBuffer {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{:#?}", self.pixels)
+	}
 }
