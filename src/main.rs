@@ -3,13 +3,15 @@ use kelder_scherm_renderer::{Config, Primitive, Vertex, VertexBuffer};
 
 #[tokio::main]
 async fn main() -> Result<(), RenderError> {
-	let cfg = Config::new(600, 800, Primitive::LineLoop);
+	let cfg = Config::new(600, 800, Primitive::Triangle);
 
 	let verts = vec![
 		Vertex(250, 250),
 		Vertex(270, 250),
-		Vertex(270, 270),
-		Vertex(250, 270),
+		Vertex(260, 265),
+		Vertex(150, 150),
+		Vertex(170, 150),
+		Vertex(160, 165),
 	];
 
 	let vbuf = VertexBuffer::from(verts);

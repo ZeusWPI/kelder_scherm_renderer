@@ -12,37 +12,37 @@ impl VertexBuffer {
 	/// - buff: [VertexBuffer](super::VertexBuffer) - The list of vertices to draw
 	pub fn rasterize_scan(&self, cfg: &Config) -> PixelBuffer {
 		match cfg.primitive {
-			Primitive::Point => {
-				self.iter()
-					.map(|v| {
-						Pixel {
-							x:     v.0,
-							y:     v.1,
-							color: (255, 255, 255, 255),
-						}
-					})
-					.collect::<Vec<Pixel>>()
-					.into()
-			},
-			Primitive::Line => rasterize_line(self),
-			Primitive::LineStrip => rasterize_line_strip(self),
-			Primitive::LineLoop => rasterize_line_loop(self),
-			_ => PixelBuffer { pixels: vec![] },
+			Primitive::Point => rasterize_point(self).into(),
+			Primitive::Line => rasterize_line(self).into(),
+			Primitive::LineStrip => rasterize_line_strip(self).into(),
+			Primitive::LineLoop => rasterize_line_loop(self).into(),
+			Primitive::Triangle => rasterize_triangle(self).into(),
+			Primitive::TriangleStrip => Vec::new().into(),
+			Primitive::TriangleWire => Vec::new().into(),
+			Primitive::TriangleWireStrip => Vec::new().into(),
 		}
 	}
 }
 
-fn rasterize_line(vbuf: &[Vertex]) -> PixelBuffer {
+#[inline(always)]
+fn rasterize_point(vbuf: &[Vertex]) -> Vec<Pixel> {
+	vbuf.par_iter()
+		.map(|vertex| {
+			Pixel { x: vertex.0, y: vertex.1, color: (255, 255, 255, 255) }
+		})
+		.collect()
+}
+
+#[inline(always)]
+fn rasterize_line(vbuf: &[Vertex]) -> Vec<Pixel> {
 	vbuf.par_chunks_exact(2)
-		.collect::<Vec<&[Vertex]>>()
-		.par_iter()
 		.map(|pair| bresenham_scan(pair))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
-		.into()
 }
 
-fn rasterize_line_strip(vbuf: &[Vertex]) -> PixelBuffer {
+#[inline(always)]
+fn rasterize_line_strip(vbuf: &[Vertex]) -> Vec<Pixel> {
 	let v_stripbuf = VertexStripBuffer { buf: vbuf, idx: 0 };
 
 	v_stripbuf
@@ -50,24 +50,28 @@ fn rasterize_line_strip(vbuf: &[Vertex]) -> PixelBuffer {
 		.map(|pair| bresenham_scan(&pair))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
-		.into()
 }
 
-fn rasterize_line_loop(vbuf: &[Vertex]) -> PixelBuffer {
+#[inline(always)]
+fn rasterize_line_loop(vbuf: &[Vertex]) -> Vec<Pixel> {
 	let mut looped_buffer = vbuf.to_vec();
 	looped_buffer.push(vbuf[0]);
 
-	let v_loopbuf = VertexStripBuffer {
-		buf: &looped_buffer,
-		idx: 0
-	};
+	let v_loopbuf = VertexStripBuffer { buf: &looped_buffer, idx: 0 };
 
 	v_loopbuf
 		.par_bridge()
 		.map(|pair| bresenham_scan(&pair))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
-		.into()
+}
+
+#[inline(always)]
+fn rasterize_triangle(vbuf: &[Vertex]) -> Vec<Pixel> {
+	vbuf.par_chunks_exact(3)
+		.map(|triplet| rasterize_line_loop(triplet))
+		.collect::<Vec<Vec<Pixel>>>()
+		.concat()
 }
 
 struct VertexStripBuffer<'a> {

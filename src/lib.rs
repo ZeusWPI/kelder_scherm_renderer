@@ -39,16 +39,20 @@ pub enum Primitive {
 	/// eg. vertices 0 and 1 are a line, 1 and 2 are a line, ...
 	/// If only one vertex is given nothing will be drawn
 	LineStrip,
-	/// Same as LineStrip, but connects the first and last vertex
+	/// Same as [LineStrip](Primitive::LineStrip), but connects the first and last vertex
 	/// Essentially the same as drawing a polygon
 	LineLoop,
 	/// Treat each separate 3-tuple of vertices as defining a triangle
 	/// eg. vertices 0, 1, and 2 are a triangle; 3, 4, and 5 are a triangle, ...
 	/// Unmatched vertices are ignored
-	Triangle,
+	TriangleWire,
 	/// All 3-tuples of adjacent vertices define a triangle
 	/// eg. vertices 0, 1, and 2 are a triangle; 1, 2, and 3 are a triangle, ...
 	/// If less than 3 vertices are given nothing is drawn
+	TriangleWireStrip,
+	/// Same as [TriangleWire](Primitive::TriangleWire) but filled
+	Triangle,
+	/// Same as [TriangleWireStrip](Primitive::TriangleStrip) but filled
 	TriangleStrip,
 }
 
