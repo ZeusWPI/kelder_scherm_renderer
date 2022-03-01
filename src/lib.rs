@@ -52,7 +52,7 @@ pub enum Primitive {
 	TriangleWireStrip,
 	/// Same as [TriangleWire](Primitive::TriangleWire) but filled
 	Triangle,
-	/// Same as [TriangleWireStrip](Primitive::TriangleStrip) but filled
+	/// Same as [TriangleWireStrip](Primitive::TriangleWireStrip) but filled
 	TriangleStrip,
 }
 

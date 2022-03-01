@@ -3,18 +3,12 @@ use kelder_scherm_renderer::{Config, Primitive, Vertex, VertexBuffer};
 
 #[tokio::main]
 async fn main() -> Result<(), RenderError> {
-	let cfg = Config::new(600, 800, Primitive::Triangle);
+	let cfg = Config::new(600, 800, Primitive::TriangleWireStrip);
 
-	let verts = vec![
-		Vertex(150, 25),
-		Vertex(173, 38),
-		Vertex(146, 31),
-		Vertex(250, 25),
-		Vertex(260, 60),
-		Vertex(240, 45),
-	];
+	let verts = vec![Vertex(140, 290), Vertex(150, 290), Vertex(145, 280), Vertex(155, 280)];
 
 	let mut vbuf = VertexBuffer::from(verts);
+
 	let pbuf = vbuf.rasterize_scan(&cfg);
 
 	// println!("{}", pbuf);

@@ -9,22 +9,31 @@ use rayon::prelude::*;
 use crate::{Config, Pixel, PixelBuffer, Primitive, Vertex, VertexBuffer};
 
 impl VertexBuffer {
-	/// Rasterize the given list of vertices using Bresenham's algorithm
+	/// Rasterize the given list of vertices as the requested primitive
 	///
 	/// ## Arguments
 	/// - cfg: [Config](super::Config) - The renderer configuration
 	/// - buff: [VertexBuffer](super::VertexBuffer) - The list of vertices to draw
 	pub fn rasterize_scan(&mut self, cfg: &Config) -> PixelBuffer {
-		match cfg.primitive {
-			Primitive::Point => rasterize_points(self).into(),
-			Primitive::Line => rasterize_lines(self).into(),
-			Primitive::LineStrip => rasterize_line_strips(self).into(),
-			Primitive::LineLoop => rasterize_line_loops(self).into(),
-			Primitive::Triangle => rasterize_triangles(self).into(),
-			Primitive::TriangleStrip => Vec::new().into(),
-			Primitive::TriangleWire => rasterize_triangle_wires(self).into(),
-			Primitive::TriangleWireStrip => Vec::new().into(),
-		}
+		let p_vec = match cfg.primitive {
+			Primitive::Point => rasterize_points(self),
+			Primitive::Line => rasterize_lines(self),
+			Primitive::LineStrip => rasterize_line_strips(self),
+			Primitive::LineLoop => rasterize_line_loops(self),
+			Primitive::Triangle => rasterize_triangles(self),
+			Primitive::TriangleStrip => Vec::new(),
+			Primitive::TriangleWire => rasterize_triangle_wires(self),
+			Primitive::TriangleWireStrip => rasterize_triangle_wire_strips(self),
+		};
+
+		p_vec.par_iter()
+			.filter(|p| {
+				(p.x as usize) < cfg.display_width
+					&& (p.y as usize) < cfg.display_height
+			})
+			.map(|p| *p)
+			.collect::<Vec<Pixel>>()
+			.into()
 	}
 }
 
@@ -47,7 +56,7 @@ fn rasterize_lines(vbuf: &[Vertex]) -> Vec<Pixel> {
 
 #[inline(always)]
 fn rasterize_line_strips(vbuf: &[Vertex]) -> Vec<Pixel> {
-	let v_stripbuf = VertexStripBuffer { buf: vbuf, idx: 0 };
+	let v_stripbuf = VertexLineStripBuffer { buf: vbuf, idx: 0 };
 
 	v_stripbuf
 		.par_bridge()
@@ -61,19 +70,11 @@ fn rasterize_line_loops(vbuf: &[Vertex]) -> Vec<Pixel> {
 	let mut looped_buffer = vbuf.to_vec();
 	looped_buffer.push(vbuf[0]);
 
-	let v_loopbuf = VertexStripBuffer { buf: &looped_buffer, idx: 0 };
+	let v_loopbuf = VertexLineStripBuffer { buf: &looped_buffer, idx: 0 };
 
 	v_loopbuf
 		.par_bridge()
 		.map(|pair| bresenham_scan(&pair))
-		.collect::<Vec<Vec<Pixel>>>()
-		.concat()
-}
-
-#[inline(always)]
-fn rasterize_triangles(vbuf: &mut [Vertex]) -> Vec<Pixel> {
-	vbuf.par_chunks_exact_mut(3)
-		.map(|triplet| rasterize_triangle(triplet))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
 }
@@ -86,12 +87,31 @@ fn rasterize_triangle_wires(vbuf: &[Vertex]) -> Vec<Pixel> {
 		.concat()
 }
 
-struct VertexStripBuffer<'a> {
+#[inline(always)]
+fn rasterize_triangle_wire_strips(vbuf: &[Vertex]) -> Vec<Pixel> {
+	let v_stripbuf = VertexTriangleStripBuffer { buf: vbuf, idx: 1 };
+
+	v_stripbuf
+		.par_bridge()
+		.map(|triplet| bresenham_scan_triangle(&triplet))
+		.collect::<Vec<Vec<Pixel>>>()
+		.concat()
+}
+
+#[inline(always)]
+fn rasterize_triangles(vbuf: &mut [Vertex]) -> Vec<Pixel> {
+	vbuf.par_chunks_exact_mut(3)
+		.map(|triplet| rasterize_triangle(triplet))
+		.collect::<Vec<Vec<Pixel>>>()
+		.concat()
+}
+
+struct VertexLineStripBuffer<'a> {
 	buf: &'a [Vertex],
 	idx: usize,
 }
 
-impl<'a> Iterator for VertexStripBuffer<'a> {
+impl<'a> Iterator for VertexLineStripBuffer<'a> {
 	type Item = Vec<Vertex>;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -104,20 +124,39 @@ impl<'a> Iterator for VertexStripBuffer<'a> {
 	}
 }
 
+struct VertexTriangleStripBuffer<'a> {
+	buf: &'a [Vertex],
+	idx: usize,
+}
+
+impl<'a> Iterator for VertexTriangleStripBuffer<'a> {
+	type Item = Vec<Vertex>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		if self.idx < self.buf.len() - 1 {
+			self.idx += 1;
+			Some(vec![
+				self.buf[self.idx - 2],
+				self.buf[self.idx - 1],
+				self.buf[self.idx],
+			])
+		} else {
+			None
+		}
+	}
+}
+
 fn rasterize_triangle(vbuf: &mut [Vertex]) -> Vec<Pixel> {
 	vbuf.sort_by(|a, b| a.1.cmp(&b.1));
 
 	// v0.y <= v1.y <= v2.y
 	// Flat bottom triangle
 	if vbuf[1].1 == vbuf[2].1 {
-		println!("flat bottom");
 		bresenham_fill_flat(&vbuf)
 	// Flat top triangle
 	} else if vbuf[0].1 == vbuf[1].1 {
-		println!("flat top");
 		bresenham_fill_flat(&vec![vbuf[2], vbuf[1], vbuf[0]])
 	} else {
-		println!("compound");
 		let x4 = ((vbuf[0].0 as f64)
 			+ (((vbuf[1].1 - vbuf[0].1) as f64) / ((vbuf[2].1 - vbuf[0].1) as f64))
 				* ((vbuf[2].0 - vbuf[0].0) as f64)) as isize;
