@@ -49,7 +49,7 @@ fn rasterize_points(vbuf: &[Vertex]) -> Vec<Pixel> {
 #[inline(always)]
 fn rasterize_lines(vbuf: &[Vertex]) -> Vec<Pixel> {
 	vbuf.par_chunks_exact(2)
-		.map(|pair| bresenham_scan(pair))
+		.map(|pair| bresenham_rasterize(pair))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
 }
@@ -60,7 +60,7 @@ fn rasterize_line_strips(vbuf: &[Vertex]) -> Vec<Pixel> {
 
 	v_stripbuf
 		.par_bridge()
-		.map(|pair| bresenham_scan(&pair))
+		.map(|pair| bresenham_rasterize(&pair))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
 }
@@ -74,7 +74,7 @@ fn rasterize_line_loops(vbuf: &[Vertex]) -> Vec<Pixel> {
 
 	v_loopbuf
 		.par_bridge()
-		.map(|pair| bresenham_scan(&pair))
+		.map(|pair| bresenham_rasterize(&pair))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
 }
@@ -82,7 +82,7 @@ fn rasterize_line_loops(vbuf: &[Vertex]) -> Vec<Pixel> {
 #[inline(always)]
 fn rasterize_triangle_wires(vbuf: &[Vertex]) -> Vec<Pixel> {
 	vbuf.par_chunks_exact(3)
-		.map(|triplet| bresenham_scan_triangle(triplet))
+		.map(|triplet| bresenham_rasterize_triangle(triplet))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
 }
@@ -93,7 +93,7 @@ fn rasterize_triangle_wire_strips(vbuf: &[Vertex]) -> Vec<Pixel> {
 
 	v_stripbuf
 		.par_bridge()
-		.map(|triplet| bresenham_scan_triangle(&triplet))
+		.map(|triplet| bresenham_rasterize_triangle(&triplet))
 		.collect::<Vec<Vec<Pixel>>>()
 		.concat()
 }
@@ -163,25 +163,29 @@ fn rasterize_triangle(vbuf: &mut [Vertex]) -> Vec<Pixel> {
 	// v0.y <= v1.y <= v2.y
 	// Flat bottom triangle
 	if vbuf[1].1 == vbuf[2].1 {
-		bresenham_fill_flat(&vbuf)
+		bresenham_rasterize_fill_flat(&vbuf)
 	// Flat top triangle
 	} else if vbuf[0].1 == vbuf[1].1 {
-		bresenham_fill_flat(&vec![vbuf[2], vbuf[1], vbuf[0]])
+		bresenham_rasterize_fill_flat(&vec![vbuf[2], vbuf[1], vbuf[0]])
 	} else {
 		let x4 = ((vbuf[0].0 as f64)
 			+ (((vbuf[1].1 - vbuf[0].1) as f64) / ((vbuf[2].1 - vbuf[0].1) as f64))
 				* ((vbuf[2].0 - vbuf[0].0) as f64)) as isize;
 
 		let split_vertex = Vertex(x4, vbuf[1].1);
-		let mut pbuf = bresenham_fill_flat(&vec![vbuf[0], vbuf[1], split_vertex]);
-		pbuf.append(&mut bresenham_fill_flat(&vec![vbuf[2], vbuf[1], split_vertex]));
+		let mut pbuf = bresenham_rasterize_fill_flat(&vec![vbuf[0], vbuf[1], split_vertex]);
+		pbuf.append(&mut bresenham_rasterize_fill_flat(&vec![
+			vbuf[2],
+			vbuf[1],
+			split_vertex,
+		]));
 
 		pbuf
 	}
 }
 
 /// First vertex is assumed to have smallest (closest to top of screen) y coordinate
-fn bresenham_fill_flat(triplet: &[Vertex]) -> Vec<Pixel> {
+fn bresenham_rasterize_fill_flat(triplet: &[Vertex]) -> Vec<Pixel> {
 	let Vertex(mut x0, mut y0) = triplet[0];
 	let Vertex(x1, y1) = triplet[1];
 	let Vertex(x2, y2) = triplet[2];
@@ -285,15 +289,15 @@ fn bresenham_fill_flat(triplet: &[Vertex]) -> Vec<Pixel> {
 	pixel_vec
 }
 
-fn bresenham_scan_triangle(triplet: &[Vertex]) -> Vec<Pixel> {
-	let mut pbuf = bresenham_scan(&triplet[0..=1]);
-	pbuf.append(&mut bresenham_scan(&triplet[1..=2]));
-	pbuf.append(&mut bresenham_scan(&vec![triplet[2], triplet[0]]));
+fn bresenham_rasterize_triangle(triplet: &[Vertex]) -> Vec<Pixel> {
+	let mut pbuf = bresenham_rasterize(&triplet[0..=1]);
+	pbuf.append(&mut bresenham_rasterize(&triplet[1..=2]));
+	pbuf.append(&mut bresenham_rasterize(&vec![triplet[2], triplet[0]]));
 
 	pbuf
 }
 
-fn bresenham_scan(pair: &[Vertex]) -> Vec<Pixel> {
+fn bresenham_rasterize(pair: &[Vertex]) -> Vec<Pixel> {
 	let Vertex(mut x0, mut y0) = pair[0];
 	let Vertex(x1, y1) = pair[1];
 
