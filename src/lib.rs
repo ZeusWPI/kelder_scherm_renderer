@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 #[macro_use]
 extern crate thiserror;
@@ -69,6 +69,10 @@ impl Deref for VertexBuffer {
 	type Target = Vec<Vertex>;
 
 	fn deref(&self) -> &Self::Target { &self.vertices }
+}
+
+impl DerefMut for VertexBuffer {
+	fn deref_mut(&mut self) -> &mut Self::Target { &mut self.vertices }
 }
 
 impl From<Vec<Vertex>> for VertexBuffer {

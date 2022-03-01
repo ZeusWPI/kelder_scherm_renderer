@@ -6,18 +6,18 @@ async fn main() -> Result<(), RenderError> {
 	let cfg = Config::new(600, 800, Primitive::Triangle);
 
 	let verts = vec![
-		Vertex(200, 200),
-		Vertex(220, 200),
-		Vertex(210, 215),
-		Vertex(100, 100),
-		Vertex(120, 100),
-		Vertex(110, 115),
+		Vertex(150, 25),
+		Vertex(173, 38),
+		Vertex(146, 31),
+		Vertex(250, 25),
+		Vertex(260, 60),
+		Vertex(240, 45),
 	];
 
-	let vbuf = VertexBuffer::from(verts);
+	let mut vbuf = VertexBuffer::from(verts);
 	let pbuf = vbuf.rasterize_scan(&cfg);
 
-	println!("{}", pbuf);
+	// println!("{}", pbuf);
 
 	pbuf.render_pixels().await?;
 
